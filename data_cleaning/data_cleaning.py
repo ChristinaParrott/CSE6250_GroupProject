@@ -2,7 +2,6 @@
 import os
 import pandas as pd
 import re
-import nltk
 from nltk.tokenize import word_tokenize
 import sys
 from os.path import dirname, abspath
@@ -302,9 +301,13 @@ df_note_events['TEXT'] = df_note_events.apply(lambda row : remove_spaces(row['TE
 df_note_events['TEXT'] = df_note_events.apply(lambda row : "\n" + row['TEXT'], axis = 1)
 
 # avoid having to copy files around manually
-concept_path = os.path.join(parent_path, 'concept_annotation\\data')
+concept_path = os.path.join(parent_path, 'concept_annotation')
 sys.path.insert(0, concept_path)
 
-output_path = os.path.join(concept_path, 'output.csv')
+data_path = os.path.join(parent_path, 'concept_annotation/data')
+if not os.path.exists(data_path):
+    os.mkdir(data_path)
+
+output_path = os.path.join(data_path, 'output.csv')
 df_note_events.to_csv(output_path, index=False)
 

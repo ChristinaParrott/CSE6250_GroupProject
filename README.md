@@ -20,11 +20,10 @@ generate_samples
 │       └── NOTEEVENTS_SAMPLE.csv
 ````
 3. Clean the data
-   1. Inside of the concept_annotation folder, create a data folder
-   2. The next set of scripts that need to be run are in the data_cleaning folder
-   3. Run python data_cleaning.py, which can take up to an hour to execute. When it is complete, it will put an output.csv file in the data folder
-   4. Run python create_chunks.py, which splits the output.csv file into roughly equal sized chunks, which will be placed in a chunkssmall directory. This script also creates an outputchunkssmall directory, which will be used by the next step.
-   5. When this process is complete, the directory structure of your concept_annotation folder should look like this:
+   1. The next set of scripts that need to be run are in the data_cleaning folder
+   2. Run python data_cleaning.py, which can take up to an hour to execute. When it is complete, it will put an output.csv file in the data folder
+   3. Run python create_chunks.py, which splits the output.csv file into roughly equal sized chunks, which will be placed in a chunkssmall directory. This script also creates an outputchunkssmall directory, which will be used by the next step.
+   4. When this process is complete, the directory structure of your concept_annotation folder should look like this:
 ````
 concept_annotation
 ├── data
@@ -49,7 +48,7 @@ QuickUMLS
 5. After this process completes, you will have several csv.output files inside of the data/outputchunsksmall directory
 6. From the terminal, navigate to the concept_annotation/data folder and run the following command to concatenate all of the output files together
 ````
-cat .outputchunkssmall/* > concatenated_output.csv
+cat data/outputchunkssmall/* > concatenated_output.csv
 ````
 7. Next run python quickumls_processing.py, which will perform final data prep on the input data, and will generate a file called post_processed_output.csv
 8. At the end of this process, your concept_annotation folder should look like the following:
@@ -73,6 +72,6 @@ concept_annotation
 └── useful_commands.txt
 ````
 5. Create datasets, train, and test feed-forward neural network
-   1. Create a data folder inside of the PyTorch_scripts/mortality_prediction directory
+   1. The next set of scripts are inside of the PyTorch_scripts/mortality_prediction directory
    2. Run python 01_data_prep_mortality.py, which will prepare the datasets for NN training/testing. This script will output two files, prepared_data.npz and prepared_data_deathTime.npz to the data folder
    3. Run python 02_FFN_mortality.py, which will train and test the FNN, and will output AUC-ROC along with loss for the train and test datasets to the terminal
