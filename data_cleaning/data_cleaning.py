@@ -7,7 +7,7 @@ from os.path import dirname, abspath
 
 # avoid having to copy files around manually
 parent_path = dirname(dirname(abspath(__file__)))
-samples_path = os.path.join(parent_path, 'generate_samples\\data\\output')
+samples_path = os.path.join(parent_path, 'generate_samples/data/output')
 sys.path.insert(0, samples_path)
 
 ##Step 0 - Load files
@@ -280,7 +280,7 @@ def remove_rare_words(text, rare_words):
     if paragraph == "\n":
       continue
     word_list = word_tokenize(paragraph)
-    for w in word_list :
+    for w in word_list:
         if w in rare_words:
             paragraph = re.sub('(\s+)'+ w +'(\s+)', ' ', paragraph)
             paragraph = re.sub('^'+ w +'(\s+)', '', paragraph)
@@ -293,11 +293,11 @@ vocab = get_vocab(df_note_events)
 rare_words = {key: value for key, value in vocab.items() if value < 5}
 
 # Remove rare words
-df_note_events['TEXT'] = df_note_events.apply(lambda row : remove_rare_words(row['TEXT'], rare_words.keys()), axis = 1)
+df_note_events['TEXT'] = df_note_events.apply(lambda row: remove_rare_words(row['TEXT'], rare_words.keys()), axis = 1)
 # Remove spaces (again?)
-df_note_events['TEXT'] = df_note_events.apply(lambda row : remove_spaces(row['TEXT']), axis = 1)
+df_note_events['TEXT'] = df_note_events.apply(lambda row: remove_spaces(row['TEXT']), axis = 1)
 # Prepend a newline character so this plays nicely with the annotation processor
-df_note_events['TEXT'] = df_note_events.apply(lambda row : "\n" + row['TEXT'], axis = 1)
+df_note_events['TEXT'] = df_note_events.apply(lambda row: "\n" + row['TEXT'], axis = 1)
 
 # avoid having to copy files around manually
 concept_path = os.path.join(parent_path, 'concept_annotation')
