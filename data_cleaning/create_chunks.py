@@ -9,7 +9,7 @@ CHUNK_SIZE = 50
 
 # avoid having to copy files around manually
 parent_path = dirname(dirname(abspath(__file__)))
-concept_path = os.path.join(parent_path, 'concept_annotation\\data')
+concept_path = os.path.join(parent_path, 'concept_annotation/data')
 sys.path.insert(0, concept_path)
 
 note_events_path = os.path.join(concept_path, 'output.csv')
