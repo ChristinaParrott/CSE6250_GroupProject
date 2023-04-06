@@ -69,7 +69,6 @@ def get_cui(file):
     print(f"File {filename} processing!")
 
     df_notes = pd.read_csv(filename)
-    df_notes = df_notes.iloc[:2]
     df_notes['TEXT'] = df_notes.apply(lambda row: get_concepts(row['TEXT']), axis=1)
     df_notes['TEXT'] = '" ' + df_notes['TEXT'] + ' "'
     df_notes['HADM_ID'] = df_notes['HADM_ID'].astype(int)

@@ -4,7 +4,7 @@ import numpy as np
 # Generate samples from each of the MIMIC input files, while ensuring that our samples will contain admissions
 # that have corresponding clinical notes
 
-SAMPLE_SIZE = 1000
+SAMPLE_SIZE = 10000
 RANDOM_STATE = 6250
 
 # This file requires that you have a data directory that contains an input and output folder inside of generate_samples

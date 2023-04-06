@@ -31,7 +31,7 @@ DIAGNOSES_FILE = os.path.join(samples_path, "DIAGNOSES_ICD_SAMPLE.csv")
 notes_path = os.path.join(parent_path, 'concept_annotation')
 sys.path.insert(0, notes_path)
 
-NOTES_FILE = os.path.join(notes_path, "concatenated_output.csv")
+NOTES_FILE = os.path.join(notes_path, "post_processed_output.csv")
 
 if not os.path.exists('./data'):
     os.mkdir('./data')

@@ -48,9 +48,8 @@ QuickUMLS
 5. After this process completes, you will have several csv.output files inside of the data/outputchunsksmall directory
 6. From the terminal, navigate to the concept_annotation/data folder and run the following command to concatenate all of the output files together
 ````
-cat data/outputchunkssmall/* > concatenated_output.csv
+cat data/outputchunkssmall/* > post_processed_output.csv
 ````
-7. Next run python quickumls_processing.py, which will perform final data prep on the input data, and will generate a file called post_processed_output.csv
 8. At the end of this process, your concept_annotation folder should look like the following:
 ````
 concept_annotation
@@ -63,12 +62,10 @@ concept_annotation
 │   └── umls-simstring.db  [1429 entries exceeds filelimit, not opening dir]
 ├── data
 │   ├── chunkssmall  [103 entries exceeds filelimit, not opening dir]
-│   ├── concatenated_output.csv
 │   ├── output.csv
 │   └── outputchunkssmall  [80 entries exceeds filelimit, not opening dir]
 ├── post_processed_output.csv
 ├── quickUMLS_getCUI.py
-├── quickumls_processing.py
 └── useful_commands.txt
 ````
 5. Create datasets, train, and test feed-forward neural network
