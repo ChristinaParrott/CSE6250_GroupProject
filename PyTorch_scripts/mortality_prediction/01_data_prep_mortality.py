@@ -1,11 +1,16 @@
-#!/usr/bin/python
-# Code previously taken from junio@usp.br - Jose F Rodrigues Jr (special thanks)
-# Code modified by jamil.zaghir@grenoble-inp.org - Jamil Zaghir
+########################################################################################
+#    Citation - reused with modification from:
+#
+#    Title: patient_trajectory_prediction
+#    Author: JamilProg
+#    Date: 10/23/2020
+#    Availability: https://github.com/JamilProg/patient_trajectory_prediction/blob/master/PyTorch_scripts/mortality_prediction/01_data_prep_mortality.py
+#
+########################################################################################
 
 import pickle
 from datetime import datetime
-import math
-import icd9_to_ccs as ccsMapper
+import csv
 import copy
 import sys
 import os
@@ -23,10 +28,21 @@ sys.path.insert(0, notes_path)
 
 NOTES_FILE = os.path.join(notes_path, "post_processed_output.csv")
 
+if not os.path.exists('data'):
+    os.mkdir('data')
+
 OUTPUT_FILE = 'data/prepared_data'
 
 CUI_set = set()
 CCS_set = set()
+
+def get_ccs(icd_code):
+    reader = csv.reader(open('ICDToCCS.csv', 'r'))
+    d = dict(reader)
+    if (icd_code not in d.keys()):
+        return
+    else:
+        return d[icd_code]
 
 def get_ICD9s_from_mimic_file(f, hadm_map):
     mimic = open(f, 'r')
@@ -257,7 +273,7 @@ if __name__ == '__main__':
     for k, icd_values in hadm_icd9_dict.items():
         for icd9code in icd_values:
             if icd9code not in icdtoccs.keys():
-                ccs_code = ccsMapper.getCCS(icd9code)
+                ccs_code = get_ccs(icd9code)
                 icdtoccs[icd9code] = ccs_code
                 CCS_set.add(ccs_code)
 

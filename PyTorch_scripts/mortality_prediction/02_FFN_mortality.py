@@ -9,7 +9,7 @@
 ########################################################################################
 
 import pickle
-import math
+import matplotlib.pyplot as plt
 import random
 import argparse
 import torch
@@ -130,10 +130,10 @@ def train():
 
     sizedata = len(data_x)
     print("Data of size:", sizedata)
+    k = ARGS.kFold
     # Split dataset into 5 sub-datasets
     splitted_x = list(split(data_x, 5))
     splitted_y = list(split(data_y, 5))
-    k = ARGS.kFold
 
     del data_x
     del data_y
@@ -156,7 +156,7 @@ def train():
 
         # with torch.cuda.device(1):
         # Hyperparameters :
-        epochs = ARGS.nEpochs
+        n_epochs = ARGS.nEpochs
         batchsize = ARGS.batchSize
         learning_rate = ARGS.lr
         log_interval = 2
@@ -177,8 +177,10 @@ def train():
             shuffle=True)
         gc.collect()
 
+        losses = []
+
         # Training
-        for epoch in range(epochs):
+        for epoch in range(n_epochs):
             for batch_idx, (data, target) in enumerate(train_loader):
                 # data, target = data.cuda(), target.cuda()
                 data, target = Variable(data.float()), Variable(target.float())
@@ -192,6 +194,7 @@ def train():
                         epoch, batch_idx * len(data), len(train_loader.dataset),
                                100. * batch_idx / len(train_loader)))
                     print(loss.data)
+                    losses.append(loss.item())
 
         print("Training done - deleting variables and starting test")
         dataset = None
@@ -240,13 +243,27 @@ def train():
             for batch_x, batch_true, batch_prob in zip(x, labels, outputs):
                 YTRUE = np.concatenate((YTRUE, [batch_true]), axis=0) if YTRUE is not None else [batch_true]
                 YPROBA = np.concatenate((YPROBA, [batch_prob]), axis=0) if YPROBA is not None else [batch_prob]
-        ROC_avg_score = roc(YTRUE, YPROBA, average='macro', multi_class='ovo')
-        print("ROC Average Score:", ROC_avg_score)
-        AUC_folds.append(ROC_avg_score)
+        try:
+            ROC_avg_score = roc(YTRUE, YPROBA, average='macro', multi_class='ovo')
+            print("ROC Average Score:", ROC_avg_score)
+            AUC_folds.append(ROC_avg_score)
+        except:
+            print("ROC was undefined because classes are all the same")
+
+    epochs = [n + 1 for n in range(n_epochs)]
+    plot_loss(epochs, losses)
 
     # Output score of each fold + average
     print("AUC_scores: ", AUC_folds)
     print("Mean: ", sum(AUC_folds) / len(AUC_folds))
+
+
+def plot_loss(epochs, train_loss):
+    plt.plot(epochs, train_loss, label='Training Loss')
+    plt.title("Training Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.savefig("training_loss.png")
 
 
 def parse_arguments():
@@ -258,7 +275,7 @@ def parse_arguments():
     parser.add_argument('--nEpochs', type=int, default=100, help='Number of training iterations.')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
     parser.add_argument('--dropOut', type=float, default=0.5, help='FFN Dropout.')
-    parser.add_argument('--kFold', type=int, default=3, help='K value (int) of K-fold cross-validation.')
+    parser.add_argument('--kFold', type=int, default=5, help='K value (int) of K-fold cross-validation.')
     parser.add_argument('--withCCS', help="add CCS features in the input.")
 
     ARGStemp = parser.parse_args()
