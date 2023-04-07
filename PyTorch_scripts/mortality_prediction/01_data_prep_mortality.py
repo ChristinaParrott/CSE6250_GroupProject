@@ -1,14 +1,4 @@
-########################################################################################
-#    Citation - reused with modification from:
-#
-#    Title: patient_trajectory_prediction
-#    Author: JamilProg
-#    Date: 9/8/2020
-#    Availability: https://github.com/JamilProg/patient_trajectory_prediction/blob/master/PyTorch_scripts/mortality_prediction/01_data_prep_mortality.py
-#
-########################################################################################
-
-## Original author's citations
+#!/usr/bin/python
 # Code previously taken from junio@usp.br - Jose F Rodrigues Jr (special thanks)
 # Code modified by jamil.zaghir@grenoble-inp.org - Jamil Zaghir
 
@@ -33,371 +23,289 @@ sys.path.insert(0, notes_path)
 
 NOTES_FILE = os.path.join(notes_path, "post_processed_output.csv")
 
-if not os.path.exists('./data'):
-    os.mkdir('./data')
-
 OUTPUT_FILE = 'data/prepared_data'
 
 CUI_set = set()
 CCS_set = set()
 
-def get_ICD9s_from_mimic_file(fileName, hadmToMap):
-    mimicFile = open(fileName, 'r')  # row_id,subject_id,hadm_id,seq_num,ICD9_code
-    mimicFile.readline()
-    number_of_null_ICD9_codes = 0
-    for line in mimicFile:  # 0  ,     1    ,    2   ,   3  ,    4
-        tokens = line.strip().split(',')
-        hadm_id = int(tokens[2])
-        if (len(tokens[4]) == 0):  # ignore diagnoses where ICD9_code is null
-            number_of_null_ICD9_codes += 1
+def get_ICD9s_from_mimic_file(f, hadm_map):
+    mimic = open(f, 'r')
+    mimic.readline()
+    null_icd9 = 0
+    for line in mimic:
+        codes = line.strip().split(',')
+        id = int(codes[2])
+        if (len(codes[4]) == 0):
+            null_icd9 += 1
             continue
 
-        ICD9_code = tokens[4]
-        if ICD9_code.find("\"") != -1:
-            ICD9_code = ICD9_code[1:-1]  # toss off quotes and proceed
-        ICD9_code = ICD9_code
-        # To understand the line below, check https://mimic.physionet.org/mimictables/diagnoses_icd/
-        # "The code field for the ICD-9-CM Principal and Other Diagnosis Codes is six characters in length (not really!),
-        # with the decimal point implied between the third and fourth digit for all diagnosis codes other than the V codes.
-        # The decimal is implied for V codes between the second and third digit."
-        # Actually, if you look at the codes (https://raw.githubusercontent.com/drobbins/ICD9/master/ICD9.txt), simply take the three first characters
-        # if not ARGS.map_ICD9_to_CCS:
-        #     ICD9_code = ICD9_code[:4]  # No CCS mapping, get the first alphanumeric four letters only
-        if hadm_id in hadmToMap:
-            hadmToMap[hadm_id].add(ICD9_code)
+        icd9 = codes[4]
+        if icd9.find("\"") != -1:
+            icd9 = icd9[1:-1]
+        icd9 = icd9
+
+        if id in hadm_map:
+            hadm_map[id].add(icd9)
         else:
-            hadmToMap[hadm_id] = set()  # use set to avoid repetitions
-            hadmToMap[hadm_id].add(ICD9_code)
-    for hadm_id in hadmToMap.keys():
-        hadmToMap[hadm_id] = list(hadmToMap[hadm_id])  # convert to list, as the rest of the codes expects
-    mimicFile.close()
-    print('-Number of null ICD9 codes in file ' + fileName + ': ' + str(number_of_null_ICD9_codes))
-    return hadmToMap
+            hadm_map[id] = set()
+            hadm_map[id].add(icd9)
+    for id in hadm_map.keys():
+        hadm_map[id] = list(hadm_map[id])
+    mimic.close()
+
+    return hadm_map
 
 
-def get_CUINotes_from_CSV_file(fileName):
-    """ Get the mapping ADM_ID -> vector of CUI codes (vector of string) with 'C' tossed off
-    Get others statistics such as number of occurrence of each category and
-    description, number of erroneous records (error = 1), and invalid ones."""
-    # one line in the noteevents file contains one note for one admission only
-    # however one admission has many notes; even multiple notes of the same category
-    mimicFile = open(fileName, 'r')
-    mimicFile.readline()
-    categories_map = {}
-    descriptions_map = {}
-    hadmToCUINotes_Map = {}
-    inconsistent_hadm_ids = 0
-    erroneous_records = 0
-    invalid_CUINote = 0
-    for line in mimicFile:  # rowid  , subject_id    ,    hadm_id   ,  .....
-        tokens = line.strip().split(',')
+def get_CUINotes_from_CSV_file(f):
 
-        is_error_field = tokens[9]
-        # A 1 in the ISERROR column indicates that a physician has identified this note as an error
-        # check the mimic-iii website for details at https://mimic.physionet.org/mimictables/noteevents/
-        if is_error_field == '1':
-            # print('ERROR FIELD == 1')
-            erroneous_records += 1
+    mimic = open(f, 'r')
+    mimic.readline()
+    category_dict = {}
+    description_dict = {}
+    hadmToCUI = {}
+    inconsistent_ids = 0
+    errors = 0
+    invalid_notes = 0
+    for line in mimic:
+        codes = line.strip().split(',')
+
+        is_error = codes[9]
+
+        if is_error == '1':
+            errors += 1
             continue
 
-        # Collect some statistics
-        # There are 15 different categories.
-        # The most common are: nursing/other, radiology, nursing, ecg, physician, discharge summary, echo, respiratory,...
-        category = tokens[6].lower().rstrip().strip('"')
-        if category in categories_map:
-            categories_map[category] += 1
+
+        category = codes[6].lower().rstrip().strip('"')
+        if category in category_dict:
+            category_dict[category] += 1
         else:
-            categories_map[category] = 1
+            category_dict[category] = 1
 
-        # There are 3.848 different descriptions.
-        # The most common are: report, nursing progress note, chest, Physician Resident Progress, ...
-        description = tokens[7].lower().rstrip().strip('"')
-        if description in descriptions_map:
-            descriptions_map[description] += 1
+        description = codes[7].lower().rstrip().strip('"')
+        if description in description_dict:
+            description_dict[description] += 1
         else:
-            descriptions_map[description] = 1
+            description_dict[description] = 1
 
-        # Observation: the category, description distribution is relevant
-        # select category, description, count(*)
-        # from noteevents
-        # group by category, description
-        # order by count(*) desc
 
-        # --------------------------
-        subject_id = tokens[1]
-        hadm_id = tokens[2]
-        if hadm_id == '':
-            inconsistent_hadm_ids += 1
+        id = codes[2]
+        if id == '':
+            inconsistent_ids += 1
             continue
         else:
             try:
-                hadm_id = int(hadm_id)
+                id = int(id)
             except:
                 continue
-        # Read the CUIS, take off the quotes
-        CUInote_vector = tokens[10].strip().strip('"')
-        # Take off the 'C' before every code
-        CUInote_vector = CUInote_vector.replace('C', '')
 
-        # Here we can pick a category of interest
-        # if category != 'radiology':
-        #       continue
+        CUI_vector = codes[10].strip().strip('"')
 
-        # collect the admission identification data, so that it is possible to match it with the diagnoses data
-        if len(CUInote_vector) < 5:
-            invalid_CUINote += 1
+        CUI_vector = CUI_vector.replace('C', '')
+
+
+        if len(CUI_vector) < 5:
+            invalid_notes += 1
         else:
-            if hadm_id in hadmToCUINotes_Map:
-                hadmToCUINotes_Map[hadm_id].append(CUInote_vector)
+            if id in hadmToCUI:
+                hadmToCUI[id].append(CUI_vector)
             else:
-                hadmToCUINotes_Map[hadm_id] = []
-                hadmToCUINotes_Map[hadm_id].append(CUInote_vector)
-    mimicFile.close()
-
-    print('Number of note records with null hadm_ids: ' + str(inconsistent_hadm_ids))
-    print('Number of erroneous records (ERROR = 1): ' + str(erroneous_records))
-    print('Number of records with invalid CUI Notes: ' + str(invalid_CUINote))
-    categories_map = sorted(categories_map.items(), key=lambda x: x[1], reverse=True)
-    descriptions_map = sorted(descriptions_map.items(), key=lambda x: x[1], reverse=True)
-    print('CATEGORIES: ' + str(categories_map))
-    print('DESCRIPTIONS: ' + str(descriptions_map))
-    return hadmToCUINotes_Map
+                hadmToCUI[id] = []
+                hadmToCUI[id].append(CUI_vector)
+    mimic.close()
 
 
-def split_and_convertToInt(aListOfCUINotes):
-    """ Split vector of CUIs and convert them to int (in a set to avoid duplicate) """
-    # One admission has many CUINotes (each a string of ints), we "agregate" them by creating a set of CUIs with set union
+    return hadmToCUI
+
+
+def split_and_convertToInt(CUI_list):
+
     set_of_CUIcodes = set()
-    for CUINotes in aListOfCUINotes:
-        tokens = CUINotes.strip().split(' ')
-        for value in tokens:
-            if value == '"':
-                print('no')
-            set_of_CUIcodes.add(int(value))
-            CUI_set.add(int(value))  # Add the CUI in the set of ALL possible CUIs in the file
+    for note in CUI_list:
+        codes = note.strip().split(' ')
+        for c in codes:
+            set_of_CUIcodes.add(int(c))
+            CUI_set.add(int(c))
     return list(set_of_CUIcodes)
 
 
 def getCUICodes_givenAdmID():
-    print('Building Map: hadm_id to set of Notes from ' + NOTES_FILE)
-    hadmToCUINotes_Map = get_CUINotes_from_CSV_file(NOTES_FILE)
-    print('-Number of valid admissions (the ones with, at least, one note): ' + str(len(hadmToCUINotes_Map)))
-    for hadm_id, notes_list in hadmToCUINotes_Map.items():
-        hadmToCUINotes_Map[hadm_id] = split_and_convertToInt(hadmToCUINotes_Map[hadm_id])
-    return hadmToCUINotes_Map
+
+    hadmToCUI = get_CUINotes_from_CSV_file(NOTES_FILE)
+
+    for id, notes_list in hadmToCUI.items():
+        hadmToCUI[id] = split_and_convertToInt(hadmToCUI[id])
+    return hadmToCUI
 
 
 def admissionsParser():
-    """ Get three maps:
-    1- Patient_ID -> Set of ADM_ID
-    2- ADM_ID -> ADM_TIME
-    3- ADM_ID -> DISCH_TIME
-    4- Patient_ID -> DEATH_TIME (null if not passed away)
-    """
-    mimic_ADMISSIONS_csv = open(ADMISSIONS_FILE, 'r')
-    mimic_ADMISSIONS_csv.readline()  # discard the header of the csv file
-    initial_number_of_admissions = 0
-    subjectTOhadms_Map = {}
-    hadmTOadmttime_Map = {}
-    hadmTOdischtime_Map = {}
-    subjectTOdeathtime_Map = {}
-    print('Build map subject_id -> list of hadm_ids')
-    for line in mimic_ADMISSIONS_csv:
-        initial_number_of_admissions += 1
-        tokens = line.strip().split(',')
-        subject_id = int(tokens[1])
-        hadm_id = int(tokens[2])
-        admittime = datetime.strptime(tokens[3], '%Y-%m-%d %H:%M:%S')
-        dischargetime = datetime.strptime(tokens[4], '%Y-%m-%d %H:%M:%S')
+
+    ADMISSIONS = open(ADMISSIONS_FILE, 'r')
+    ADMISSIONS.readline()
+    initial_admissions = 0
+    subject_dict = {}
+    admittime_dict = {}
+    discharge_dict = {}
+    deathtime_dict = {}
+
+    for line in ADMISSIONS:
+        initial_admissions += 1
+        codes = line.strip().split(',')
+        subject_id = int(codes[1])
+        id = int(codes[2])
+        admittime = datetime.strptime(codes[3], '%Y-%m-%d %H:%M:%S')
+        dischargetime = datetime.strptime(codes[4], '%Y-%m-%d %H:%M:%S')
         deathtime = None
-        if tokens[5]:
-            deathtime = datetime.strptime(tokens[5], '%Y-%m-%d %H:%M:%S')
-        # inconsistent admissions to avoid
+        if codes[5]:
+            deathtime = datetime.strptime(codes[5], '%Y-%m-%d %H:%M:%S')
+
         if admittime > dischargetime:
             continue
-        # update the maps
-        hadmTOadmttime_Map[hadm_id] = admittime
-        hadmTOdischtime_Map[hadm_id] = dischargetime
+
+        admittime_dict[id] = admittime
+        discharge_dict[id] = dischargetime
         if deathtime:
-            subjectTOdeathtime_Map[subject_id] = deathtime
-        if subject_id in subjectTOhadms_Map:
-            subjectTOhadms_Map[subject_id].append(hadm_id)
+            deathtime_dict[subject_id] = deathtime
+        if subject_id in subject_dict:
+            subject_dict[subject_id].append(id)
         else:
-            subjectTOhadms_Map[subject_id] = [hadm_id]  # the brackets indicate that it will be a list
-    mimic_ADMISSIONS_csv.close()
-    print('-Initial number of admissions: ' + str(initial_number_of_admissions))
-    print('-Initial number of subjects: ' + str(len(subjectTOhadms_Map)))
-    print('-Initial number of passed away subjects: ' + str(len(subjectTOdeathtime_Map)))
-    return subjectTOhadms_Map, hadmTOadmttime_Map, hadmTOdischtime_Map, subjectTOdeathtime_Map
+            subject_dict[subject_id] = [id]
+    ADMISSIONS.close()
+
+    return subject_dict, admittime_dict, discharge_dict, deathtime_dict
 
 
 if __name__ == '__main__':
-    # Step 0 : get arguments (admissions file, diagnoses file, CUIs file, and output filename)
 
-    # Step 1 : get admissions ID its admittime given the patient ID
-    subjectTOhadms_Map, hadmTOadmttime_Map, hadmTOdischtime_Map, subjectTOdeathtime_Map = admissionsParser()
+    subject_dict, admittime_dict, discharge_dict, deathtime_dict = admissionsParser()
 
-    # Step 2 : get CUIs from the CUIs file given admission ID
-    hadmToCUINotes_Map = getCUICodes_givenAdmID()
 
-    # Step 3 : Remove admissions ID whose notes is empty, remove patients ID if there isn't any note anymore.
-    # Some admissions do not have an associated text - we toss them off
-    # May cause the presence of patients with 0 admissions hadm_id; we clear these patients too
-    number_of_admissions_without_notes = 0
-    print('Cleaning up admissions without notes')
-    for subject_id, subjectHadmList in subjectTOhadms_Map.items():  # hadmTOadmttime_Map,subjectTOhadms_Map,hadm_cid9s_Map
-        subjectHadmListCopy = list(
-            subjectHadmList)  # Copy the list, iterate over the copy, edit the original; otherwise, iteration problems
+    hadmtoCUI = getCUICodes_givenAdmID()
+
+
+    admits_no_note = 0
+
+    for subject_id, subjectHadmList in subject_dict.items():
+        subjectHadmListCopy = list(subjectHadmList)
         for hadm_id in subjectHadmListCopy:
-            if hadm_id not in hadmToCUINotes_Map.keys():  # Map hadmToCUINotes_Map is already valid by creation
-                number_of_admissions_without_notes += 1
-                del hadmTOadmttime_Map[hadm_id]  # Delete by key
-                # Since this hadm_id does not have a note, we remove it from the corresponding subject's list
-                subjectHadmList.remove(hadm_id)
-    print('-Number of admissions without notes: ' + str(number_of_admissions_without_notes))
-    print('-Number of admissions after cleaning: ' + str(len(hadmToCUINotes_Map)))
-    print('-Number of subjects after cleaning: ' + str(len(subjectTOhadms_Map)))
+            if hadm_id not in hadmtoCUI.keys():
+                admits_no_note += 1
+                del admittime_dict[hadm_id]
 
-    # Step 4 : get ICDs from the Diagnoses file given admission ID
-    hadmToICD9CODEs_Map = {}
+                subjectHadmList.remove(hadm_id)
+    # print('-Number of admissions without notes: ' + str(admits_no_note))
+    # print('-Number of admissions after cleaning: ' + str(len(hadmtoCUI)))
+    # print('-Number of subjects after cleaning: ' + str(len(subject_dict)))
+
+
+    hadm_icd9_dict = {}
 
     if len(DIAGNOSES_FILE) > 0:
-        # one line in the diagnoses file contains only one diagnose code (ICD9) for one admission hadm_id
-        print('Building Map: hadm_id to set of ICD9 codes from DIAGNOSES_ICD')
-        # get_ICD9s_from_mimic_file(ARGS.diagnoses_file, hadmToICD9CODEs_Map)
-        hadmToICD9CODEs_Map = get_ICD9s_from_mimic_file(DIAGNOSES_FILE, hadmToICD9CODEs_Map)
+        hadm_icd9_dict = get_ICD9s_from_mimic_file(DIAGNOSES_FILE, hadm_icd9_dict)
 
-    print('-Number of valid admissions (at least one diagnosis): ' + str(len(hadmToICD9CODEs_Map)))
 
-    # Cleaning up inconsistencies
-    # some tuples in the diagnoses table have ICD9 empty; we clear the admissions without diagnoses from all the maps
-    # this may cause the presence of patients (subject_ids) with 0 admissions hadm_id; we clear these guys too
-    # We also clean admissions in which admission time < discharge time - there are 89 records like that in the original dataset
-    number_of_admissions_without_diagnosis = 0
-    number_of_subjects_without_valid_admissions = 0
-    print('Cleaning up admissions without diagnoses')
-    subjects_without_admission = []
-    for subject_id, hadmList in subjectTOhadms_Map.items():  # hadmTOadmttime_Map,subjectTOhadms_Map,hadm_cid9s_Map
-        hadmListCopy = list(
-            hadmList)  # copy the list, iterate over the copy, edit the original; otherwise, iteration problems
+
+    admissions_no_diagnosis = 0
+    subject_invalid_admission = 0
+    subject_no_admission = []
+    for subject_id, hadmList in subject_dict.items():
+        hadmListCopy = list(hadmList)
         for admission in hadmListCopy:
-            if admission not in hadmToICD9CODEs_Map.keys():  # map hadmToICD9CODEs_Map is already valid by creation
-                number_of_admissions_without_diagnosis += 1
-                del hadmTOadmttime_Map[admission]  # delete by key
+            if admission not in hadm_icd9_dict.keys():
+                admissions_no_diagnosis += 1
+                del admittime_dict[admission]
                 hadmList.remove(admission)
-            if len(hadmList) == 0:  # toss off subject_id without admissions
-                number_of_subjects_without_valid_admissions += 1
-                subjects_without_admission.append(subject_id)
-    for subject in subjects_without_admission:
-        del subjectTOhadms_Map[subject]  # delete by value
+            if len(hadmList) == 0:
+                subject_invalid_admission += 1
+                subject_no_admission.append(subject_id)
+    for subject in subject_no_admission:
+        del subject_dict[subject]
 
-    print('-Number of admissions without diagnosis: ' + str(number_of_admissions_without_diagnosis))
-    print('-Number of admissions after cleaning: ' + str(len(hadmToICD9CODEs_Map)))
-    print('-Number of subjects without admissions: ' + str(number_of_subjects_without_valid_admissions))
-    print('-Number of subjects after cleaning: ' + str(len(subjectTOhadms_Map)))
+    subject_hadm_dict = {}
 
-    # Step 5 : ordering admissions by admittime for each patient
-    # We sort the admissions (hadm_id) according to the admission time (admittime)
-    # After this, we have a list subjectTOorderedHADM_IDS_Map(subject_id) -> admission-time-ordered set of notes
-    print('Building Map: subject_id to admission-ordered (admittime, Note) and cleaning one-admission-only patients')
-    subjectTOorderedHADM_IDS_Map = {}
-    # For each admission hadm_id of each patient subject_id
-    number_of_subjects_with_less_than_two_admissions = 0
-    subjects_in_map = list(subjectTOhadms_Map.keys())
-    final_number_of_admissions = 0
+    subjects_lessthan2admissions = 0
+    subjects_in_map = list(subject_dict.keys())
+    numAdmissions = 0
     for subject_id in subjects_in_map:
-        subjectHadmList = subjectTOhadms_Map[subject_id]
+        subjectHadmList = subject_dict[subject_id]
         if len(subjectHadmList) < 2:
-            number_of_subjects_with_less_than_two_admissions += 1
-            del subjectTOhadms_Map[subject_id]
-            continue  # discard subjects with only one admission
-        # sorts the hadm_ids according to date admttime
-        # only for the hadm_id in the list hadmList
-        sortedList = sorted(
-            [(hadm_id, hadmTOadmttime_Map[hadm_id], hadmToCUINotes_Map[hadm_id]) for hadm_id in subjectHadmList])
-        # each element in subjectTOhadms_Map is a key-value (subject_id, [(hadm_id, admittime, floats_vector))]
-        subjectTOhadms_Map[subject_id] = sortedList
-        final_number_of_admissions += len(sortedList)
-    print('-Number of discarded subjects with less than two admissions: ' + str(
-        number_of_subjects_with_less_than_two_admissions))
-    subjectTOorderedHADM_IDS_Map = subjectTOhadms_Map
-    print('-Number of subjects after ordering: ' + str(len(subjectTOorderedHADM_IDS_Map)))
+            subjects_lessthan2admissions += 1
+            del subject_dict[subject_id]
+            continue
+        sortedList = sorted([(id, admittime_dict[id], hadmtoCUI[id]) for id in subjectHadmList])
+        subject_dict[subject_id] = sortedList
+        numAdmissions += len(sortedList)
 
-    # Step 6 : CUIs to integer IDs
-    CUI_ordered_internalCodesMap = {}
+    subject_hadm_dict = subject_dict
+
+
+    CUI_ordered = {}
     for i, key in enumerate(CUI_set):
-        CUI_ordered_internalCodesMap[key] = i
-    # print("Example : C0015726 -", CUI_ordered_internalCodesMap[15726])
-    print('Converting database CUI ids to sequential integer ids')
-    # each element in subjectTOorderedHADM_IDS_Map is a key-value (subject_id, [(hadm_id, admittime, CUI_List)])
-    # final_number_of_admissions = 0
-    for subject, admissions in subjectTOorderedHADM_IDS_Map.items():
+        CUI_ordered[key] = i
+
+
+    for subject, admissions in subject_hadm_dict.items():
         for admission in admissions:
-            # final_number_of_admissions += 1
+
             codes_list = admission[2]
             for i in range(len(codes_list)):
-                codes_list[i] = CUI_ordered_internalCodesMap[
-                    codes_list[i]]  # alter the code number to an internal sequential list
+                codes_list[i] = CUI_ordered[
+                    codes_list[i]]
 
-    # Step 7 : convert them to CCS code to reduce granularities and add them to subjectTOorderedHADM_IDS_Map
-    # Get CCS codes
-    icdtoccs_dico = dict()
-    for k, icd_values in hadmToICD9CODEs_Map.items():
+
+    icdtoccs = dict()
+    for k, icd_values in hadm_icd9_dict.items():
         for icd9code in icd_values:
-            if icd9code not in icdtoccs_dico.keys():
+            if icd9code not in icdtoccs.keys():
                 ccs_code = ccsMapper.getCCS(icd9code)
-                icdtoccs_dico[icd9code] = ccs_code
+                icdtoccs[icd9code] = ccs_code
                 CCS_set.add(ccs_code)
-    # Add CCS vectors, we now have : [subjID, [AdmID, AdmTime, [CUI], [CCS]]]
-    subjectTOorderedHADM_IDS_COPY = copy.deepcopy(
-        subjectTOorderedHADM_IDS_Map)  # We need to copy, otherwise, iterations problems
-    for subj, admlist in subjectTOorderedHADM_IDS_COPY.items():
-        for adm_tuple in admlist:
-            adm_list = list(adm_tuple)
-            subjectTOorderedHADM_IDS_Map[subj].remove(adm_tuple)
-            ccs_list = list()
-            for icdcode in hadmToICD9CODEs_Map[adm_tuple[0]]:
-                ccs_list.append(icdtoccs_dico[icdcode])
-            adm_list.append(ccs_list)
-            adm_tuple = tuple(adm_list)
-            subjectTOorderedHADM_IDS_Map[subj].append(adm_tuple)
 
-    # Step 8 : CCS to integer IDs
-    CCS_ordered_internalCodesMap = {}
+    subjectTOorderedHADM_IDS_COPY = copy.deepcopy(
+        subject_hadm_dict)
+    for subj, admlist in subjectTOorderedHADM_IDS_COPY.items():
+        for adm in admlist:
+            adm_list = list(adm)
+            subject_hadm_dict[subj].remove(adm)
+            ccs_list = list()
+            for icdcode in hadm_icd9_dict[adm[0]]:
+                ccs_list.append(icdtoccs[icdcode])
+            adm_list.append(ccs_list)
+            adm = tuple(adm_list)
+            subject_hadm_dict[subj].append(adm)
+
+
+    CUI_ordered = {}
     for i, key in enumerate(CCS_set):
-        CCS_ordered_internalCodesMap[key] = i
-    print('Converting database CCS ids to sequential integer ids')
-    final_number_of_admissions = 0
-    for subject, admissions in subjectTOorderedHADM_IDS_Map.items():
+        CUI_ordered[key] = i
+
+    numAdmissions = 0
+    for subject, admissions in subject_hadm_dict.items():
         for admission in admissions:
-            final_number_of_admissions += 1
+            numAdmissions += 1
             codes_list = admission[3]
             for i in range(len(codes_list)):
-                codes_list[i] = CCS_ordered_internalCodesMap[
-                    codes_list[i]]  # alter the code number to an internal sequential list
+                codes_list[i] = CUI_ordered[
+                    codes_list[i]]
 
-    # Step 9 : Add dischtime, deathtime so it becomes: SubjectID -> [admID, admittime, [CUI], [CCS], dischtime],deathtime
-    # Deep copy to avoid iter pb
-    subjectTOorderedHADM_IDS_COPY = copy.deepcopy(subjectTOorderedHADM_IDS_Map)
+
+    subjectTOorderedHADM_IDS_COPY = copy.deepcopy(subject_hadm_dict)
     for subj, admlist in subjectTOorderedHADM_IDS_COPY.items():
-        for adm_tuple in admlist:
-            adm_list = list(adm_tuple)
-            subjectTOorderedHADM_IDS_Map[subj].remove(adm_tuple)
-            adm_list.append(hadmTOdischtime_Map[adm_tuple[0]])
-            adm_tuple = tuple(adm_list)
-            subjectTOorderedHADM_IDS_Map[subj].append(adm_tuple)
+        for adm in admlist:
+            adm_list = list(adm)
+            subject_hadm_dict[subj].remove(adm)
+            adm_list.append(discharge_dict[adm[0]])
+            adm = tuple(adm_list)
+            subject_hadm_dict[subj].append(adm)
 
-    # Step 10 : Toss-off subject ID without deathtime (alive patients)
+
     subjects_without_deathtime = []
-    for subj, _ in subjectTOorderedHADM_IDS_Map.items():
-        if subj not in subjectTOdeathtime_Map:
+    for subj, _ in subject_hadm_dict.items():
+        if subj not in deathtime_dict:
             subjects_without_deathtime.append(subj)
     for subj_to_del in subjects_without_deathtime:
-        del subjectTOorderedHADM_IDS_Map[subj_to_del]
+        del subject_hadm_dict[subj_to_del]
 
-    # Step 11 : writing all the data
-    print('Writing patients'' notes read from files ' + NOTES_FILE)
-    pickle.dump(subjectTOorderedHADM_IDS_Map, open(OUTPUT_FILE + '.npz', 'wb'), protocol=2)
-    pickle.dump(subjectTOdeathtime_Map, open(OUTPUT_FILE + '_deathTime.npz', 'wb'), protocol=2)
-    print('-Final number of subjects'' notes for training: ' + str(len(subjectTOorderedHADM_IDS_Map)))
-    print('-Final number of admissions for training: ' + str(final_number_of_admissions))
+
+    pickle.dump(subject_hadm_dict, open(OUTPUT_FILE + '.npz', 'wb'), protocol=2)
+    pickle.dump(deathtime_dict, open(OUTPUT_FILE + '_deathTime.npz', 'wb'), protocol=2)
