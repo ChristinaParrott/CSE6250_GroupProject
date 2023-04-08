@@ -220,7 +220,6 @@ if __name__ == '__main__':
         hadm_icd9_dict = get_ICD9s_from_mimic_file(DIAGNOSES_FILE, hadm_icd9_dict)
 
 
-
     admissions_no_diagnosis = 0
     subject_invalid_admission = 0
     subject_no_admission = []

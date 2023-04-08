@@ -21,6 +21,7 @@ import numpy as np
 from sklearn.metrics import roc_auc_score as roc
 import gc
 
+RANDOM_SEED = 6250
 
 class Network(nn.Module):
     def __init__(self):
@@ -270,7 +271,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--inputdata', type=str, default='data/prepared_data.npz', metavar='<visit_file>')
     parser.add_argument('--inputdata2', type=str, default='data/prepared_data_deathTime.npz', metavar='<visit_file>')
-    parser.add_argument('--hiddenDimSize', type=int, default=100, help='Size of FFN hidden layer')
+    parser.add_argument('--hiddenDimSize', type=int, default=50, help='Size of FFN hidden layer')
     parser.add_argument('--batchSize', type=int, default=50, help='Batch size.')
     parser.add_argument('--nEpochs', type=int, default=50, help='Number of training iterations.')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate.')
@@ -285,6 +286,6 @@ def parse_arguments():
 if __name__ == '__main__':
     global ARGS
     ARGS = parse_arguments()
-    torch.manual_seed(6250)
-    random.seed(6250)
+    torch.manual_seed(RANDOM_SEED)
+    random.seed(RANDOM_SEED)
     train()

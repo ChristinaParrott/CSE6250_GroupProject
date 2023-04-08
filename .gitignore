@@ -1,4 +1,4 @@
 data/
 concept_annotation/QuickUMLS
 .idea/
-*.csv
+*output.csv
