@@ -5,6 +5,16 @@ from nltk.tokenize import word_tokenize
 import sys
 from os.path import dirname, abspath
 
+########################################################################################
+#    Citation - reused with modification from:
+#
+#    Title: patient_trajectory_prediction
+#    Author: JamilProg
+#    Date: 10/22/2020
+#    Availability: https://github.com/JamilProg/patient_trajectory_prediction/blob/master/data_cleaning/noteEvents_preproc.py
+#
+########################################################################################
+
 # avoid having to copy files around manually
 parent_path = dirname(dirname(abspath(__file__)))
 samples_path = os.path.join(parent_path, 'generate_samples/data/output')
@@ -159,7 +169,6 @@ tens = {"2": "twenty", "3": "thirty", "4": "fourty", "5": "fifty",
         "6": "sixty", "7": "seventy", "8": "eighty", "9": "ninety"}
 grand = {0: " billion ", 1: " million ", 2: " thousand ", 3: ""}
 
-# This is copied directly form the original author and needs to be cited
 def three_dig_to_words(val):
     """ Function converting number to words of 3 digit
     Code from Barath Kumar
@@ -177,7 +186,6 @@ def three_dig_to_words(val):
             ans = ans + ones[val[2]]
         return ans
 
-# This is copied directly form the original author and needs to be cited
 def num_to_words(value):
     """ This function takes an integer as an input, and outputs its text version
     Works with integer from 0 to 999 999 999 999.
@@ -201,7 +209,6 @@ def num_to_words(value):
     result = re.sub(r'(^ *| *$)', ' ', result)
     return result
 
-# This is copied directly form the original author and needs to be cited
 def num_to_text(text):
   text = text.strip()
   cleaned_text = ""
