@@ -5,7 +5,7 @@ import sys
 from os.path import dirname, abspath
 
 ## chunk size should be 50, but it can be adjusted lower for the smaller files
-CHUNK_SIZE = 50
+CHUNK_SIZE = 25
 
 # avoid having to copy files around manually
 parent_path = dirname(dirname(abspath(__file__)))

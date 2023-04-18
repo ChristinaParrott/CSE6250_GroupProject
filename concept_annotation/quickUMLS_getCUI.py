@@ -74,11 +74,14 @@ def get_cui(file):
     df_notes['HADM_ID'] = df_notes['HADM_ID'].astype(int)
 
     output_file = output_chunks + file + '.output'
-    df_notes.to_csv(output_file, index=False, header=False, quoting=csv.QUOTE_NONE)
-
-    print(f"File {filename} done processing!")
+    try:
+        df_notes.to_csv(output_file, index=False, header=False, quoting=csv.QUOTE_NONE)
+        print(f"File {filename} done processing!")
+    except Exception as e:
+        print(f"File {filename} error!")
+        print(f"Exception: {e}")
 
 if __name__ == "__main__":
-    pool = Pool(os.cpu_count()-2)
+    pool = Pool(os.cpu_count()-4)
     pool.map(get_cui, os.listdir(input_chunks))
 

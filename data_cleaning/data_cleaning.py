@@ -1,10 +1,3 @@
-import os
-import pandas as pd
-import re
-from nltk.tokenize import word_tokenize
-import sys
-from os.path import dirname, abspath
-
 ########################################################################################
 #    Citation - reused with modification from:
 #
@@ -14,6 +7,14 @@ from os.path import dirname, abspath
 #    Availability: https://github.com/JamilProg/patient_trajectory_prediction/blob/master/data_cleaning/noteEvents_preproc.py
 #
 ########################################################################################
+
+import os
+import pandas as pd
+import re
+from nltk.tokenize import word_tokenize
+import sys
+from os.path import dirname, abspath
+
 
 # avoid having to copy files around manually
 parent_path = dirname(dirname(abspath(__file__)))

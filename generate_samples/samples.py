@@ -4,7 +4,7 @@ import numpy as np
 # Generate samples from each of the MIMIC input files, while ensuring that our samples will contain admissions
 # that have corresponding clinical notes
 
-SAMPLE_SIZE = 10000
+# SAMPLE_SIZE = 10000
 RANDOM_STATE = 6250
 
 # This file requires that you have a data directory that contains an input and output folder inside of generate_samples
@@ -12,11 +12,16 @@ admissions = pd.read_csv("data/input/ADMISSIONS.csv")
 diagnoses = pd.read_csv("data/input/DIAGNOSES_ICD.csv")
 notes = pd.read_csv("data/input/NOTEEVENTS.csv")
 
-admissions_hadms = admissions["HADM_ID"].drop_duplicates()
+admissions_counts = admissions.groupby('SUBJECT_ID')['ADMITTIME'].count().reset_index(name="adm_count")
+admissions_counts = admissions_counts[admissions_counts.adm_count > 2]
+admissions_hadms = admissions_counts.merge(admissions, on='SUBJECT_ID', how='inner')
+
+admissions_hadms = admissions_hadms["HADM_ID"].drop_duplicates()
 notes_hadms = notes["HADM_ID"].drop_duplicates()
 
 admissions_with_notes = pd.Series(np.intersect1d(admissions_hadms.values, notes_hadms.values)).astype(int)
-admissions_with_notes = admissions_with_notes.sample(SAMPLE_SIZE, random_state=RANDOM_STATE).tolist()
+admissions_with_notes = admissions_with_notes.sample(frac=1, random_state=RANDOM_STATE).tolist()
+# admissions_with_notes = admissions_with_notes.sample(SAMPLE_SIZE, random_state=RANDOM_STATE).tolist()
 
 admissions = admissions[admissions["HADM_ID"].isin(admissions_with_notes)]
 diagnoses = diagnoses[diagnoses["HADM_ID"].isin(admissions_with_notes)]

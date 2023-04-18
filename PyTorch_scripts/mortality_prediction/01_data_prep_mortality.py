@@ -243,7 +243,7 @@ if __name__ == '__main__':
     numAdmissions = 0
     for subject_id in subjects_in_map:
         subjectHadmList = subject_dict[subject_id]
-        if len(subjectHadmList) < 2:
+        if len(subjectHadmList) < 1:
             subjects_lessthan2admissions += 1
             del subject_dict[subject_id]
             continue

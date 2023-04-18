@@ -159,21 +159,20 @@ def admissions_to_dicts():
     arr_disch_date = admissions_df["DISCHTIME"].dt.to_pydatetime()
     admissions_df["DISCHTIME"] = pd.Series(arr_disch_date, dtype="object")
 
+    arr_death_date = admissions_df["DEATHTIME"].dt.to_pydatetime()
+    admissions_df["DEATHTIME"] = pd.Series(arr_death_date, dtype="object")
+
     admittime_dict = dict(zip(admissions_df.HADM_ID, admissions_df.ADMITTIME))
     discharge_dict = dict(zip(admissions_df.HADM_ID, admissions_df.DISCHTIME))
 
     deaths_df = admissions_df[admissions_df['DEATHTIME'].notnull()]
 
-    arr_death_date = deaths_df["DEATHTIME"].dt.to_pydatetime()
-    deaths_df["DEATHTIME"] = pd.Series(arr_death_date, dtype="object")
-
-    deathtime_dict = dict(zip(deaths_df.HADM_ID, deaths_df.DEATHTIME))
+    deathtime_dict = dict(zip(deaths_df.SUBJECT_ID, deaths_df.DEATHTIME))
 
     subject_df = admissions_df.groupby('SUBJECT_ID')['HADM_ID'].apply(list).reset_index(name='HADM_LIST')
     subject_dict = dict(zip(subject_df.SUBJECT_ID, subject_df.HADM_LIST))
 
     return subject_dict, admittime_dict, discharge_dict, deathtime_dict
-
 
 if __name__ == '__main__':
     subject_dict, admittime_dict, discharge_dict, deathtime_dict = admissions_to_dicts()
