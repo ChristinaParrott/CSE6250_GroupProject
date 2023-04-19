@@ -8,6 +8,7 @@ dependencies:
   - pandas
   - scikit-learn
   - scipy
+  - skorch
   - dill
   - pip
   - pip:
