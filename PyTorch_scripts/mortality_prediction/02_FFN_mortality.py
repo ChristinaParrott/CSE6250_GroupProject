@@ -33,7 +33,7 @@ N_EPOCHS = 50
 LEARNING_RATE = 0.001
 DROP_OUT = 0.5
 K_FOLDS = 5
-WITH_CCS = False
+WITH_CCS = True
 
 class Network(nn.Module):
     def __init__(self, input_dim):

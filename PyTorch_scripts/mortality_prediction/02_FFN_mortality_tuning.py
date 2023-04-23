@@ -175,7 +175,7 @@ def train():
                             cv=K_FOLDS,
                             scoring=scorer,
                             refit=True,
-                            verbose=True)
+                            verbose=False)
 
         grid_result = grid.fit(X_train_t, y_train_t)
 
@@ -198,9 +198,9 @@ def train():
             criterion=nn.BCEWithLogitsLoss,
             optimizer=optim.Adam,
             module__input_dim=input_dim,
-            module__activation=nn.Sigmoid,
+            module__activation=nn.ReLU,
             module__drop_out=0.5,
-            module__hidden_dim=100
+            module__hidden_dim=50
         )
         best_model = best_model.fit(X_train_t, y_train_t)
 

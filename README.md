@@ -72,3 +72,4 @@ concept_annotation
    1. The next set of scripts are inside of the PyTorch_scripts/mortality_prediction directory
    2. Run python 01_data_prep_mortality.py, which will prepare the datasets for NN training/testing. This script will output two files, prepared_data.npz and prepared_data_deathTime.npz to the data folder
    3. Run python 02_FFN_mortality.py, which will train and test the FNN, and will output AUC-ROC along with loss for the train and test datasets to the terminal
+6. Optional: you may run hyperparameter tuning by issuing the following command: python 02_FFN_mortality_tuning.py. However, this has already been done, and the best parameters are set as the defaults in the 02_FFN_mortality.py script.
